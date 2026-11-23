@@ -297,6 +297,55 @@
     ].join('\n');
   }
 
+  // Google Forms receives the registration and writes it to the linked Sheet.
+  // A hidden form POST is used instead of fetch because Google Forms does not
+  // expose a cross-origin JSON endpoint for browser clients.
+  function submitRegistrationToGoogleForm(payload) {
+    const endpoint = 'https://docs.google.com/forms/d/e/1FAIpQLSdj_aF6HQMqWglOo_L3BQq2bh5LZifstU2gaViEtnrdY-qL3g/formResponse';
+    const fields = {
+      'entry.4e0da9d1': payload.prenom,
+      'entry.276c048b': payload.nom,
+      'entry.667d19db': payload.email,
+      'entry.02c77811': payload.telephone,
+      'entry.661b2349': payload.affiliation,
+      'entry.35b14f19': payload.etablissement,
+      'entry.7d860fe8': payload.faculte,
+    };
+
+    const frameName = `ctrlart-google-form-${Date.now()}`;
+    const iframe = document.createElement('iframe');
+    iframe.name = frameName;
+    iframe.title = 'Registration submission';
+    iframe.setAttribute('aria-hidden', 'true');
+    iframe.style.position = 'fixed';
+    iframe.style.width = '1px';
+    iframe.style.height = '1px';
+    iframe.style.opacity = '0';
+    iframe.style.pointerEvents = 'none';
+    document.body.appendChild(iframe);
+
+    const submissionForm = document.createElement('form');
+    submissionForm.method = 'POST';
+    submissionForm.action = endpoint;
+    submissionForm.target = frameName;
+    submissionForm.style.display = 'none';
+
+    Object.keys(fields).forEach((name) => {
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = name;
+      input.value = fields[name];
+      submissionForm.appendChild(input);
+    });
+
+    document.body.appendChild(submissionForm);
+    submissionForm.submit();
+    window.setTimeout(() => {
+      submissionForm.remove();
+      iframe.remove();
+    }, 10000);
+  }
+
   function drawQrToCanvas(canvas, text) {
     const qrLib = window.qrcodegen;
     if (!qrLib || !qrLib.QrCode) return;
@@ -559,6 +608,7 @@
       return;
     }
 
+    submitRegistrationToGoogleForm(validation.payload);
     const { record, alreadyExisted } = createTicketRecord(validation.payload);
     currentTicket = record;
     setBadgeLabel('badge_confirmed');
